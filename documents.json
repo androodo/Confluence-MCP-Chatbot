@@ -1,0 +1,107 @@
+[
+  {
+    "id": "eng-ci-001",
+    "title": "CI Pipeline and Failed Test Reporting",
+    "url": "https://confluence.demo.local/display/ENG/CI+Pipeline+Failed+Tests",
+    "tags": ["ci", "pipeline", "tests", "junit", "jira", "slack"],
+    "content": "The main CI pipeline runs lint, unit, integration, and packaging stages. Test jobs always publish JUnit XML as pipeline artifacts, even when a test command fails. The report-tests job merges the XML files and posts a summary to the pull request. A failed test is shown with its suite, test name, failure message, and a link to the retained artifact. Failures on the default branch also send a notification to the #build-failures Slack channel. After two consecutive failures with the same normalized signature, the jira-triage job creates or updates one Jira defect and labels it ci-regression. Infrastructure failures are excluded from automatic defect creation and are retried once. Test artifacts are retained for 14 days; release-branch artifacts are retained for 30 days."
+  },
+  {
+    "id": "eng-ci-002",
+    "title": "Pull Request Quality Gates",
+    "url": "https://confluence.demo.local/display/ENG/Pull+Request+Quality+Gates",
+    "tags": ["pull request", "quality gate", "coverage", "lint", "security"],
+    "content": "Every pull request must pass formatting, lint, unit tests, dependency scanning, and a build smoke test. Changed production code must maintain at least 80 percent line coverage and may not reduce repository coverage by more than one percentage point. Critical dependency vulnerabilities block merging. The code-owner review and all automated gates are required before merge. A flaky test may be quarantined only with a linked Jira ticket, an owner, and a removal date no more than 14 days away. Administrators may bypass a gate only for an active incident, and the pull request must record the incident identifier and follow-up action."
+  },
+  {
+    "id": "eng-test-001",
+    "title": "Automated Test Strategy",
+    "url": "https://confluence.demo.local/display/ENG/Automated+Test+Strategy",
+    "tags": ["testing", "unit", "integration", "end-to-end", "contract"],
+    "content": "The test pyramid favors fast unit tests, followed by contract and integration tests, with a small end-to-end suite. Unit tests run on every commit. Contract tests validate service interfaces without shared environments. Integration tests run in disposable containers on pull requests. The end-to-end smoke suite runs before deployment and the full regression suite runs nightly. New defects require a regression test at the lowest practical layer. Tests must be deterministic, isolated, and safe for parallel execution. Owners review quarantined tests every weekday and remove or repair them within 14 days."
+  },
+  {
+    "id": "eng-test-002",
+    "title": "Flaky Test Detection and Quarantine",
+    "url": "https://confluence.demo.local/display/ENG/Flaky+Test+Quarantine",
+    "tags": ["flaky", "test", "quarantine", "rerun", "ownership"],
+    "content": "A test is classified as flaky when it has both passing and failing outcomes on the same commit or fails at least three times in 20 runs without a product change. CI reruns a suspected flaky test up to two times for diagnosis, but a rerun pass does not make the original job successful. Quarantining requires a Jira defect, named owner, reason, and expiry date. Quarantined tests run in a non-blocking nightly job. The default quarantine expires after 14 days. Expired entries fail the nightly governance check until renewed or removed. The quality dashboard reports flake rate by team and test suite."
+  },
+  {
+    "id": "eng-jira-001",
+    "title": "Jira Build Failure Triage",
+    "url": "https://confluence.demo.local/display/ENG/Jira+Build+Failure+Triage",
+    "tags": ["jira", "triage", "build failure", "incident", "ownership"],
+    "content": "Build failures are categorized as product regression, test defect, infrastructure, dependency, or unknown. The on-duty build sheriff reviews new failures within four business hours. Product regressions are assigned to the team owning the changed component. Test defects go to the test owner. Infrastructure failures go to Developer Productivity. The Jira issue contains the failing commit, pipeline URL, normalized signature, first-seen time, affected branches, and artifact link. Duplicate signatures update the existing open issue rather than creating a new one. Severity is High when the default branch or a release branch is blocked, and Medium for a pull-request-only failure."
+  },
+  {
+    "id": "eng-docker-001",
+    "title": "Local Docker Development Environment",
+    "url": "https://confluence.demo.local/display/ENG/Local+Docker+Environment",
+    "tags": ["docker", "local", "development", "compose", "containers"],
+    "content": "Run docker compose up --build to start the API, PostgreSQL, Redis, and a mail catcher. Copy .env.example to .env before the first start; never commit .env. Source code is bind-mounted for reload, while dependencies live in a named volume to avoid host-platform conflicts. Use docker compose run --rm api pytest for tests and docker compose down -v only when you intentionally want to erase local database and dependency volumes. The supported Docker Desktop memory allocation is at least 6 GB. If ports 5432 or 6379 conflict with host services, override them in compose.override.yml, which is ignored by Git."
+  },
+  {
+    "id": "eng-docker-002",
+    "title": "Container Image Build and Security",
+    "url": "https://confluence.demo.local/display/ENG/Container+Image+Security",
+    "tags": ["docker", "container", "image", "security", "sbom", "registry"],
+    "content": "Production images use multi-stage builds and run as a non-root user. Base images are pinned by digest and refreshed monthly. CI generates an SBOM, scans the final image, and blocks Critical vulnerabilities or High vulnerabilities with a known exploit. Secrets must never be passed as Docker build arguments or copied into layers; use BuildKit secret mounts for authenticated dependency downloads. Images are tagged with the Git commit SHA and an immutable release tag, then signed before promotion. The registry retains release images indefinitely and unreferenced branch images for 30 days."
+  },
+  {
+    "id": "eng-deploy-001",
+    "title": "Staging and Production Deployment Process",
+    "url": "https://confluence.demo.local/display/ENG/Deployment+Process",
+    "tags": ["deployment", "staging", "production", "approval", "canary"],
+    "content": "Merges to the default branch deploy automatically to staging after quality gates pass. Production releases use the same signed artifact that ran in staging; rebuilding between environments is prohibited. A release requires an approved change record, green smoke tests, and an on-call engineer. Production starts with a 10 percent canary for 15 minutes. If error rate, p95 latency, and saturation remain within the release thresholds, traffic advances to 50 percent and then 100 percent. Deployments during the Friday freeze require incident commander approval. The deployment system records actor, artifact digest, environment, timestamps, and outcome."
+  },
+  {
+    "id": "eng-deploy-002",
+    "title": "Rollback and Release Recovery",
+    "url": "https://confluence.demo.local/display/ENG/Rollback+Recovery",
+    "tags": ["rollback", "release", "recovery", "database", "feature flag"],
+    "content": "Rollback is the default response when a release causes customer-visible errors, breaches an SLO for five minutes, or fails health checks in two regions. The deploy service keeps the last five signed artifacts and can restore the previous version with one command. Feature flags may disable an isolated feature faster than a full rollback. Database changes must use expand-and-contract migrations so the previous application version remains compatible. Destructive schema changes occur only after the old version is no longer deployable. After recovery, link the deployment record to the incident and schedule a review within two business days."
+  },
+  {
+    "id": "eng-observe-001",
+    "title": "Service Observability Standards",
+    "url": "https://confluence.demo.local/display/ENG/Observability+Standards",
+    "tags": ["observability", "logs", "metrics", "traces", "slo", "alerts"],
+    "content": "Every production service emits structured JSON logs, RED metrics (rate, errors, duration), and distributed traces with a shared correlation ID. Logs must not contain credentials, tokens, payment data, or unmasked personal data. Dashboards show traffic, error rate, p50 and p95 latency, saturation, deployment markers, and SLO burn. Alerts must be actionable and link to a runbook. Page the on-call engineer for fast SLO burn or total service unavailability; create a ticket for slow burn and capacity trends. Telemetry labels must be bounded to avoid high-cardinality cost. Production logs are retained for 30 days."
+  },
+  {
+    "id": "eng-incident-001",
+    "title": "Incident Response Runbook",
+    "url": "https://confluence.demo.local/display/ENG/Incident+Response",
+    "tags": ["incident", "severity", "on-call", "communication", "postmortem"],
+    "content": "The first responder declares an incident when customer impact is confirmed or likely. Severity 1 covers widespread outage, safety risk, or major data exposure; Severity 2 covers significant degraded service; Severity 3 covers limited impact with a workaround. The incident commander coordinates decisions, the operations lead investigates and mitigates, and the communications lead posts updates. For Severity 1, update stakeholders every 30 minutes; for Severity 2, every 60 minutes. Prefer reversible mitigation such as rollback or feature disablement. Preserve a timeline in the incident channel. A blameless review is required within five business days for Severity 1 and Severity 2 incidents."
+  },
+  {
+    "id": "eng-secrets-001",
+    "title": "Secrets and Configuration Management",
+    "url": "https://confluence.demo.local/display/ENG/Secrets+Management",
+    "tags": ["secrets", "configuration", "credentials", "rotation", "vault"],
+    "content": "Secrets belong in the managed secret store and are injected at runtime. Repositories, container images, CI variables visible to untrusted jobs, and Confluence pages must not contain secret values. Applications identify secrets by stable logical names rather than environment-specific paths. Production access uses least-privilege workload identity; long-lived cloud keys are prohibited. Rotate database credentials every 90 days and immediately after suspected exposure. Secret scans run on every push and across repository history nightly. If a secret is committed, revoke it first, then remove it from history and document the event."
+  },
+  {
+    "id": "eng-api-001",
+    "title": "API Versioning and Compatibility",
+    "url": "https://confluence.demo.local/display/ENG/API+Versioning",
+    "tags": ["api", "versioning", "compatibility", "deprecation", "contract"],
+    "content": "Public HTTP APIs use a major version in the path. Additive fields and optional request parameters are backward compatible and do not require a new major version. Removing or renaming fields, changing meaning, or making an optional field required is breaking. A breaking change requires a new major version and at least 90 days of deprecation notice. Services publish an OpenAPI document and validate it in CI. Consumers use contract tests for critical integrations. Error responses include a stable machine-readable code, a human-readable message, and a correlation ID; they must not expose stack traces."
+  },
+  {
+    "id": "eng-review-001",
+    "title": "Engineering Code Review Guidelines",
+    "url": "https://confluence.demo.local/display/ENG/Code+Review+Guidelines",
+    "tags": ["code review", "pull request", "reviewer", "security", "size"],
+    "content": "Authors keep pull requests focused and preferably below 400 changed lines, excluding generated files. The description explains intent, approach, testing, risk, and rollback. Reviewers examine correctness, readability, tests, failure behavior, security, observability, and compatibility. At least one approval from a code owner is required. High-risk authentication, authorization, cryptography, or data migration changes require a second domain reviewer. Authors resolve every comment or record why no change is needed. Reviewers should respond within one business day; urgent production fixes follow the incident bypass process and receive retrospective review."
+  },
+  {
+    "id": "eng-release-001",
+    "title": "Release Branching and Versioning",
+    "url": "https://confluence.demo.local/display/ENG/Release+Branching",
+    "tags": ["release", "branch", "version", "semantic versioning", "hotfix"],
+    "content": "The default branch is always releasable. Normal releases are cut from the default branch and use semantic versioning. Patch versions contain backward-compatible fixes, minor versions add backward-compatible functionality, and major versions contain breaking changes. A release branch is created only while stabilizing a scheduled release and accepts fixes through reviewed cherry-picks. Emergency hotfixes branch from the currently deployed tag, pass the standard test suite, and are merged back to the default branch. Release notes list customer-visible changes, known issues, migration actions, and the exact artifact digest."
+  }
+]
